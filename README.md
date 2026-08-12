@@ -65,7 +65,8 @@ correct, just slower).
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `BIND` / `PORT` | `0.0.0.0` / `8080` | Listen address |
-| `KOITO_URL` | `http://koito:4110` | Koito base URL |
+| `KOITO_URL` | `http://koito:4110` | Upstream base URL (Koito, or any ListenBrainz-compatible endpoint) |
+| `KOITO_LBZ_BASE_PATH` | `/apis/listenbrainz` | Path prefix before `/1/...` on the upstream. Koito serves LBZ under `/apis/listenbrainz/1/...`; standard LBZ servers (Multi Scrobbler's endpoint source, ListenBrainz itself) serve `/1/...` with **no prefix — set this to `""`** for them |
 | `KOITO_DB_PATH` | `/data/koito/koito.db` | Koito SQLite file (read-only) |
 | `MB_URL` | `https://musicbrainz.org` | MusicBrainz WS/2 base |
 | `MB_USER_AGENT` | `koito-mbz-enricher/0.1.0 (+…)` | **Set your contact here** — MB policy requires an identifying UA |
@@ -74,6 +75,24 @@ correct, just slower).
 | `NEGATIVE_CACHE_SIZE` | `10000` | In-memory "MB had no match" LRU size |
 | `NEGATIVE_CACHE_TTL_DAYS` | `7` | How long a no-match is remembered |
 | `LOG_LEVEL` | `INFO` | Logging level |
+
+## Using a non-Koito upstream (e.g. Multi Scrobbler)
+
+The payload is standard ListenBrainz, so any LBZ-compatible endpoint works as the
+upstream — the only Koito-specific part is the URL path, which Koito serves under
+`/apis/listenbrainz/1/...`. Multi Scrobbler's Listenbrainz Endpoint source (and
+ListenBrainz itself) serves the standard `/1/submit-listens`, so set
+`KOITO_LBZ_BASE_PATH` to an empty string:
+
+```yaml
+environment:
+  KOITO_URL: "http://multi-scrobbler:9078"
+  KOITO_LBZ_BASE_PATH: ""
+```
+
+Multi Scrobbler will then ingest at `http://multi-scrobbler:9078/1/submit-listens`.
+Note: MS does not implement `validate-token`, so a mass setup through this path
+relays MS's 404 for that check.
 
 ## Accepting the change
 

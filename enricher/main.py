@@ -60,8 +60,20 @@ class Handler(BaseHTTPRequestHandler):
 
     # -- endpoints --------------------------------------------------------
 
+    @staticmethod
+    def _lbz_url(endpoint: str) -> str:
+        """Upstream URL for an LBZ endpoint (``submit-listens`` / ``validate-token``).
+
+        Koito serves these under ``/apis/listenbrainz/1/...``; standard
+        ListenBrainz-compatible endpoints (Multi Scrobbler, ListenBrainz itself)
+        serve them at ``/1/...`` -> set ``KOITO_LBZ_BASE_PATH`` to "".
+        """
+        base = config.KOITO_LBZ_BASE_PATH  # already stripped of slashes in config
+        prefix = f"/{base}/1" if base else "/1"
+        return f"{config.KOITO_URL}{prefix}/{endpoint}"
+
     def _validate_token(self):
-        url = f"{config.KOITO_URL}/apis/listenbrainz/1/validate-token"
+        url = self._lbz_url("validate-token")
         req = urllib.request.Request(
             url, headers={"Authorization": self.headers.get("Authorization") or ""}
         )
@@ -152,7 +164,7 @@ class Handler(BaseHTTPRequestHandler):
         return self.rfile.read(length) if length > 0 else self.rfile.read()
 
     def _forward(self, body):
-        url = f"{config.KOITO_URL}/apis/listenbrainz/1/submit-listens"
+        url = self._lbz_url("submit-listens")
         headers = {
             "Authorization": self.headers.get("Authorization") or "",
             "Content-Type": self.headers.get("Content-Type") or "application/json",

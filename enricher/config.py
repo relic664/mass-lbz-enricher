@@ -15,6 +15,11 @@ log = logging.getLogger(__name__)
 BIND = "0.0.0.0"
 PORT = 8080
 KOITO_URL = "http://koito:4110"
+# Path prefix between KOITO_URL and the LBZ endpoints on the upstream. Koito
+# serves them under /apis/listenbrainz/1/...; standard ListenBrainz servers
+# (Multi Scrobbler endpoint source, ListenBrainz itself) serve /1/... with no
+# prefix -> set this to "".
+KOITO_LBZ_BASE_PATH = "/apis/listenbrainz"
 KOITO_DB_PATH = "/data/koito/koito.db"
 MB_URL = "https://musicbrainz.org"
 MB_USER_AGENT = "koito-mbz-enricher/0.1.0 (+https://github.com/koito-mbz-enricher)"
@@ -25,9 +30,9 @@ NEGATIVE_CACHE_TTL_DAYS = 7
 LOG_LEVEL = "INFO"
 
 
-def _env(name, default, cast, what):
+def _env(name, default, cast, what, allow_empty=False):
     raw = os.environ.get(name)
-    if raw is None or raw == "":
+    if raw is None or (raw == "" and not allow_empty):
         return default
     try:
         return cast(raw)
@@ -38,13 +43,16 @@ def _env(name, default, cast, what):
 
 def load() -> None:
     """Read environment variables into the module-level constants. Idempotent."""
-    global BIND, PORT, KOITO_URL, KOITO_DB_PATH, MB_URL, MB_USER_AGENT
+    global BIND, PORT, KOITO_URL, KOITO_LBZ_BASE_PATH, KOITO_DB_PATH, MB_URL, MB_USER_AGENT
     global MB_RATE_LIMIT_SECONDS, POST_FORWARD_DELAY_MS
     global NEGATIVE_CACHE_SIZE, NEGATIVE_CACHE_TTL_DAYS, LOG_LEVEL
 
     BIND = _env("BIND", BIND, str, "string")
     PORT = _env("PORT", PORT, int, "integer")
     KOITO_URL = _env("KOITO_URL", KOITO_URL, str, "string").rstrip("/")
+    KOITO_LBZ_BASE_PATH = _env(
+        "KOITO_LBZ_BASE_PATH", KOITO_LBZ_BASE_PATH, str, "string", allow_empty=True
+    ).strip("/")
     KOITO_DB_PATH = _env("KOITO_DB_PATH", KOITO_DB_PATH, str, "string")
     MB_URL = _env("MB_URL", MB_URL, str, "string").rstrip("/")
     MB_USER_AGENT = _env("MB_USER_AGENT", MB_USER_AGENT, str, "string")

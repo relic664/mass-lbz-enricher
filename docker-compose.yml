@@ -6,8 +6,12 @@ services:
     environment:
       BIND: "0.0.0.0"
       PORT: "8080"
-      # Koito base URL as seen from this container (same compose network).
+      # Upstream base URL as seen from this container (same compose network).
       KOITO_URL: "http://koito:4110"
+      # Path prefix for the upstream's LBZ endpoints. Koito: /apis/listenbrainz.
+      # Standard LBZ servers (Multi Scrobbler endpoint source, ListenBrainz)
+      # serve /1/... with no prefix -> set to "".
+      KOITO_LBZ_BASE_PATH: "/apis/listenbrainz"
       # Koito's SQLite file, mounted read-mostly below. The middleware only SELECTs.
       KOITO_DB_PATH: "/data/koito/koito.db"
       MB_URL: "https://musicbrainz.org"

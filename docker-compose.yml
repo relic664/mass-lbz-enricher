@@ -1,0 +1,27 @@
+services:
+  koito-mbz-enricher:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      BIND: "0.0.0.0"
+      PORT: "8080"
+      # Koito base URL as seen from this container (same compose network).
+      KOITO_URL: "http://koito:4110"
+      # Koito's SQLite file, mounted read-mostly below. The middleware only SELECTs.
+      KOITO_DB_PATH: "/data/koito/koito.db"
+      MB_URL: "https://musicbrainz.org"
+      # MB's policy requires an identifying User-Agent; set your contact here.
+      MB_USER_AGENT: "koito-mbz-enricher/0.1.0 (+https://github.com/koito-mbz-enricher)"
+      MB_RATE_LIMIT_SECONDS: "1.0"
+      # Spacing between forwarding a listen that queried MB and processing the
+      # next request. Raise to 2000-3000 if Koito ever sees MB 429s.
+      POST_FORWARD_DELAY_MS: "1000"
+      NEGATIVE_CACHE_SIZE: "10000"
+      NEGATIVE_CACHE_TTL_DAYS: "7"
+      LOG_LEVEL: "INFO"
+    volumes:
+      # Same host path Koito's compose mounts (./koito:/etc/koito), so this
+      # service reads the exact same koito.db file. Read-only by intent.
+      - ./koito:/data/koito
+    restart: unless-stopped

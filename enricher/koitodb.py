@@ -17,7 +17,7 @@ from .enrich import Enrichment, artist_variants
 log = logging.getLogger(__name__)
 
 _LOOKUP_SQL = """
-SELECT t.musicbrainz_id, r.musicbrainz_id, a.musicbrainz_id
+SELECT t.musicbrainz_id, r.musicbrainz_id, a.musicbrainz_id, awn.name
 FROM tracks_with_title twt
 JOIN tracks t ON t.id = twt.id
 JOIN releases_with_title rwt ON rwt.id = t.release_id
@@ -81,14 +81,15 @@ class KoitoDBLookup:
         finally:
             conn.close()
 
-        for recording_mbid, release_mbid, artist_mbid in rows:
+        for recording_mbid, release_mbid, artist_mbid, artist_name in rows:
             if recording_mbid and release_mbid and artist_mbid:
                 return Enrichment(
                     recording_mbid=recording_mbid,
                     release_mbid=release_mbid,
                     artist_mbids=[artist_mbid],
-                    # Koito skips mapping entries with an empty credit name; the
-                    # plain artist_mbids list still carries the association.
-                    artist_credits=[(None, artist_mbid)],
+                    # Primary alias from the artists_with_name view; never None
+                    # (schema: alias NOT NULL). A null artist_credit_name crashes
+                    # some LBZ consumers (Multi Scrobbler), so always carry a name.
+                    artist_credits=[(artist_name, artist_mbid)],
                 )
         return None

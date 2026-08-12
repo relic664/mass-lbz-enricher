@@ -315,7 +315,9 @@ class MusicBrainzClient:
             if not mbid or mbid in seen:
                 continue
             seen.add(mbid)
-            name = credit.get("name") or artist.get("name")
+            # Never emit a null artist_credit_name: Multi Scrobbler's
+            # findDelimiters() crashes on it. MB always sends names in practice.
+            name = credit.get("name") or artist.get("name") or ""
             artist_mbids.append(mbid)
             artist_credits.append((name, mbid))
 

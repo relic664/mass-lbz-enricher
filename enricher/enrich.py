@@ -113,7 +113,14 @@ def rewrite_payload(track_metadata: dict, e: Enrichment) -> None:
     mm["recording_mbid"] = e.recording_mbid
     mm["release_mbid"] = e.release_mbid
     mm["artist_mbids"] = list(e.artist_mbids)
-    mm["artists"] = [{"artist_mbid": m, "artist_credit_name": n} for n, m in e.artist_credits]
+    # artist_credit_name and join_phrase are always strings: Multi Scrobbler
+    # crashes on null/undefined for both (findDelimiters, join_phrase.includes).
+    # join_phrase " , " mirrors mass's comma-joined artist_name so MS can split
+    # the credits back apart.
+    mm["artists"] = [
+        {"artist_mbid": m, "artist_credit_name": n or "", "join_phrase": ", " if i else ""}
+        for i, (n, m) in enumerate(e.artist_credits)
+    ]
 
 
 class NegativeCache:

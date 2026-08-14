@@ -28,6 +28,24 @@ _ARTIST_SPLIT_RE = re.compile(r",\s*|\s+feat\.?\s+|\s+&\s+", re.IGNORECASE)
 _HTTP_TIMEOUT = 15
 
 
+def _error_reason(body: bytes) -> str | None:
+    """MusicBrainz's error text from a non-200 body, else None.
+
+    MB returns JSON ``{"error": "..."}`` for 5xx/429; fall back to the raw
+    text so the log stays useful if the shape ever changes.
+    """
+    try:
+        data = json.loads(body)
+    except ValueError:
+        text = body.decode("utf-8", "replace").strip()
+        return text if text else None
+    if isinstance(data, dict):
+        reason = data.get("error")
+        if isinstance(reason, str) and reason:
+            return reason
+    return None
+
+
 @dataclass
 class Enrichment:
     """MBIDs recovered for one listen, in Koito's preferred shapes."""
@@ -243,7 +261,13 @@ class MusicBrainzClient:
                 time.sleep(retry_after)
                 continue
             if status != 200:
-                log.warning("MusicBrainz returned HTTP %d for query %r", status, query)
+                reason = _error_reason(body)
+                log.warning(
+                    "MusicBrainz returned HTTP %d for query %r%s",
+                    status,
+                    query,
+                    f": {reason}" if reason else "",
+                )
                 raise MusicBrainzUnavailable(f"HTTP {status}")
             try:
                 return json.loads(body)
